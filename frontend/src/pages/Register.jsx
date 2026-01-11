@@ -10,8 +10,8 @@ import { fetchWithAuth } from "../utils/fetchWithAuth.js";
 
 function Register() {
   const navigate = useNavigate();
-  const { loading } = useSelector((state) => state.user);
-  const [error, setError] = useState(null);
+  const { loading, error } = useSelector((state) => state.user);
+  
   const [formData, setFormData] = useState({});
   const dispatch = useDispatch();
 
@@ -35,15 +35,12 @@ function Register() {
 
       if (data.success) {
         dispatch(signInSuccess(data.user));
-        setError(null);
       } else {
-        dispatch(signInFailure());
-        setError(data.message);
+        dispatch(signInFailure(data.message));
       }
       navigate("/");
     } catch (error) {
-      dispatch(signInFailure());
-      setError(error.message);
+      dispatch(signInFailure(error.message));
     }
   };
   return (

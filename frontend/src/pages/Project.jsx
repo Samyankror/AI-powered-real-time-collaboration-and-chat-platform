@@ -30,6 +30,7 @@ function Project() {
   const [createFile, setCreateFile] = useState(false);
   const [fileName, setFileName] = useState("");
   const [query, setQuery] = useState("");
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
 
   const handleUserClick = (id) => {
     setSelectedUserId((prev) => {
@@ -178,17 +179,31 @@ function Project() {
 
         recieveMessage("project-message", (data) => {
           if (data.email === "ai") {
-            const inMessage = JSON.parse(data.message);
-            if (inMessage?.fileTree)
-              setFileTree((prev) => ({ ...prev, ...inMessage.fileTree }));
-            setMessages((prev) => [
-              ...prev,
-              { message: inMessage.text, username: "ai", email: "ai" },
-            ]);
-          } else {
-            setMessages((prev) => [...prev, data]);
-          }
+          //   const inMessage = JSON.parse(data.message);
+          //   if (inMessage?.fileTree)
+          //     setFileTree((prev) => ({ ...prev, ...inMessage.fileTree }));
+          //   setMessages((prev) => [
+          //     ...prev,
+          //     { message: inMessage.text, username: "ai", email: "ai" },
+          //   ]);
+          // } else {
+          //   setMessages((prev) => [...prev, data]);
+             setMessages((prev)=>[...prev,{ message: data.message, username: "ai", email: "ai" }]);
+           }
         });
+
+        recieveMessage("online-users", users => {
+  setOnlineUsers(new Set(users));
+});
+        recieveMessage("user-status",({userId,status})=>{
+          console.log(status);
+          setOnlineUsers(prev=>{
+            const updated = new Set(prev);
+            if(status==="online") updated.add(userId);
+            else updated.delete(userId);
+            return updated;
+          })
+        })
 
         getAllUsers();
       } catch (error) {
@@ -289,7 +304,11 @@ function Project() {
                   <div className="bg-slate-700  relative aspect-square w-fit h-fit rounded-full p-4 flex justify-center items-center">
                     <i className="ri-user-fill text-white absolute"></i>
                   </div>
+                  <div>
                   <h1 className="font-semibold  bgtext-lg">{user.username}</h1>
+                  <div className={`w-2 h-2 rounded-full 
+                  ${ onlineUsers.has(user._id) ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                </div>
                 </div>
               ))}
           </div>

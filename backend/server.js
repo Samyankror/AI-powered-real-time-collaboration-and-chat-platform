@@ -30,7 +30,7 @@ io.use(async(socket,next)=>{
      console.log("hello");
     const cookies = cookie.parse(socket.handshake.headers.cookie || "");
     const token = cookies.accessToken;
-       const projectId = socket.handshake.query.projectId;
+    const projectId = socket.handshake.query.projectId;
 
        if(!mongoose.Types.ObjectId.isValid(projectId)){
              return next(errorHandler(400,'Invalid projectId'));
@@ -52,13 +52,28 @@ io.use(async(socket,next)=>{
     }
 })
 
+const onlineUsers = new Set();
 io.on('connection',async(socket)=>{
     console.log('a user connected');
+    console.log(socket.user);
     if (!socket.project) {
     console.log("❌ No project found for this socket");
   }
     socket.roomId  = socket?.project._id.toString()
-    socket.join(socket.roomId);
+     const userId = socket.user?._id; 
+     console.log(userId);
+      socket.join(socket.roomId);
+   if (userId) {
+        onlineUsers.add(userId);
+        console.log("📢 EMITTING ONLINE:", userId);
+       io.to(socket.roomId).emit('user-status', {
+            userId,
+            status: 'online'
+        });
+    }
+
+    socket.emit('online-users', Array.from(onlineUsers));
+   
 
     socket.on('project-message',async(data)=>{
 
@@ -78,8 +93,16 @@ io.on('connection',async(socket)=>{
     })
 
     socket.on('disconnect',()=>{
-        console.log('user disconnected');
-        socket.leave(socket.roomId);
+         if (userId) {
+        onlineUsers.delete(userId);
+
+        io.to(socket.roomId).emit('user-status', {
+            userId,
+            status: 'offline'
+        });
+    }
+    console.log('user disconnected');
+    socket.leave(socket.roomId);
     })
 })
 server.listen(process.env.PORT,()=>{

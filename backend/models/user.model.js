@@ -39,10 +39,10 @@ userSchema.methods.isValidPassword = async function (password) {
 };
 
 userSchema.methods.generateAccessandRefreshToken = function () {
-  const accessToken = jwt.sign({ email: this.email }, process.env.JWT_SECRET, {
+  const accessToken = jwt.sign({ _id: this._id,email: this.email, }, process.env.JWT_SECRET, {
     expiresIn: "15m",
   });
-  const refreshToken = jwt.sign({ email: this.email }, process.env.JWT_SECRET, {
+  const refreshToken = jwt.sign({ _id: this._id,email: this.email }, process.env.JWT_SECRET, {
     expiresIn: "24h",
   });
   return { accessToken, refreshToken };

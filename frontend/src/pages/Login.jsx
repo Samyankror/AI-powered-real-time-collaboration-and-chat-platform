@@ -9,10 +9,10 @@ import {
 import { fetchWithAuth } from "../utils/fetchWithAuth.js";
 function Login() {
   const navigate = useNavigate();
-  const { loading } = useSelector((state) => state.user);
+  const { loading,error } = useSelector((state) => state.user);
   const [formData, setFormData] = useState({});
   const dispatch = useDispatch();
-  const [error, setError] = useState(null);
+  
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
   };
@@ -33,15 +33,12 @@ function Login() {
       console.log(data);
       if (data.success) {
         dispatch(signInSuccess(data.user));
-        setError(null);
       } else {
-        dispatch(signInFailure());
-        setError(data.message);
+        dispatch(signInFailure(data.message));
       }
       navigate("/");
     } catch (error) {
-      dispatch(signInFailure());
-      setError(error.message);
+       dispatch(signInFailure(data.message));
     }
   };
 
