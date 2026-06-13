@@ -9,6 +9,7 @@ import Markdown from "markdown-to-jsx";
 import { useSelector } from "react-redux";
 import { fetchWithAuth } from "../utils/fetchWithAuth.js";
 import Editor from "@monaco-editor/react";
+import { combineReducers } from "@reduxjs/toolkit";
 
 function Project() {
   const location = useLocation();
@@ -31,6 +32,51 @@ function Project() {
   const [fileName, setFileName] = useState("");
   const [query, setQuery] = useState("");
   const [onlineUsers, setOnlineUsers] = useState(new Set());
+   const [language, setLanguage] = useState("javascript");
+   const [output, setOutput] = useState("");
+ 
+   const [aiSuggestion, setAiSuggestion] = useState(null);
+const [showSuggestion, setShowSuggestion] = useState(false);
+
+   const handleAutoFix = async () => {
+  if (!currentFile || !fileTree[currentFile]) return;
+
+  const code = fileTree[currentFile].file.contents;
+  
+ 
+  try {
+    const data = await fetchWithAuth("/api/ai/autofix", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ code }),
+    });
+
+
+     
+     setAiSuggestion(data.fixedCode);
+     console.log(data.fixedCode);
+     setShowSuggestion(true);
+
+  } catch (err) {
+    console.error(err);
+  }
+};
+const acceptSuggestion = () => {
+  if (!aiSuggestion || !currentFile) return;
+
+  setFileTree((prev) => ({
+    ...prev,
+    [currentFile]: {
+      file: {
+        contents: aiSuggestion,
+      },
+    },
+  }));
+
+  setShowSuggestion(false);
+};
 
   const handleUserClick = (id) => {
     setSelectedUserId((prev) => {
@@ -144,6 +190,10 @@ function Project() {
       const newTree = { ...prev };
       delete newTree[fileName];
       saveFileTree(newTree);
+      sendMessage("file-tree-change", {
+      // projectId,
+      fileTree: newTree
+    });
       return newTree;
     });
   };
@@ -163,6 +213,39 @@ function Project() {
       console.log(error);
     }
   };
+
+  const runcode = async()=>{
+     const code = fileTree[currentFile]?.file?.contents;
+     console.log(currentFile);
+     const data = await fetchWithAuth("/api/run", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      language: language,
+      code: code,
+      fileName: currentFile
+    })
+  });
+ 
+  if (data.output) {
+    setOutput(data.output);
+  }
+
+  // If error occurred
+  else if (data.error) {
+
+    let debugMessage = `Error:\n${data.error}`;
+
+    if (data.aiDebug) {
+      debugMessage += `\n\nAI Debug Suggestion:\n${data.aiDebug}`;
+    }
+
+    setOutput(debugMessage);
+  }
+
+  }
 
   useEffect(() => {
     const init = async () => {
@@ -189,7 +272,9 @@ function Project() {
           // } else {
           //   setMessages((prev) => [...prev, data]);
              setMessages((prev)=>[...prev,{ message: data.message, username: "ai", email: "ai" }]);
-           }
+           }else {
+    setMessages((prev)=>[...prev, data]);
+  }
         });
 
         recieveMessage("online-users", users => {
@@ -203,6 +288,10 @@ function Project() {
             else updated.delete(userId);
             return updated;
           })
+        })
+        recieveMessage("file-tree-updated",(updatedFileTree)=>{
+          setFileTree(updatedFileTree);
+          
         })
 
         getAllUsers();
@@ -379,7 +468,7 @@ function Project() {
                 ))}
               </div>
 
-              <div className="flex flex-2 gap-2">
+              <div className="flex flex-5 gap-2">
                 {createFile && (
                   <div className="flex bg-slate-200">
                     <input
@@ -402,6 +491,11 @@ function Project() {
                         setFileTree(newft);
                         saveFileTree(newft);
                         setFileName("");
+                       sendMessage("file-tree-change", {
+                      //  projectId,
+                       fileTree: newft
+                       });
+                        
                       }}
                       className="text-[30px] rounded-md cursor-pointer"
                     >
@@ -432,15 +526,61 @@ function Project() {
                 >
                   Save
                 </button>
+                <select
+  value={language}
+  onChange={(e) => setLanguage(e.target.value)}
+  className="bg-slate-700 text-white p-2 font-semibold rounded-md cursor-pointer"
+>
+  <option value="javascript">JavaScript</option>
+  <option value="java">Java</option>
+  <option value="python">Python</option>
+  <option value="cpp">C++</option>
+</select>
+<button onClick={runcode} 
+className="bg-blue-500 text-white p-2 font-semibold rounded-md cursor-pointer" >Run</button>
               </div>
             </div>
+            
+             <div className='flex flex-col h-full'>
+             
+            <div className="h-[65%] flex flex-grow bg-white">
+             <button
+      onClick={handleAutoFix}
+      className="absolute top-12 right-1 z-10 bg-blue-600 cursor-pointer text-white px-3 py-1 rounded-md text-sm"
+    >
+      Auto Fix
+    </button>
+    {showSuggestion && (
+  <div className="absolute bottom-44 right-5 bg-slate-900 text-white p-4 rounded-md w-[400px] z-20">
+    
+    <h3 className="font-bold mb-2">AI Suggestion</h3>
 
-            <div className="bottom flex flex-grow bg-white">
+    <pre className="text-sm max-h-40 overflow-auto">
+      {aiSuggestion}
+    </pre>
+
+    <div className="flex gap-2 mt-3">
+      <button
+        onClick={acceptSuggestion}
+        className="bg-green-500 px-3 py-1 rounded"
+      >
+        Accept
+      </button>
+
+      <button
+        onClick={() => setShowSuggestion(false)}
+        className="bg-red-500 px-3 py-1 rounded"
+      >
+        Reject
+      </button>
+    </div>
+  </div>
+)}
               {fileTree && fileTree[currentFile] && (
                 <Editor
                   height="100%"
                   width="100%"
-                  defaultLanguage="javascript"
+                   language={language}
                   theme="vs-dark"
                   value={fileTree[currentFile].file.contents}
                   onChange={(updatedContent) => {
@@ -456,9 +596,16 @@ function Project() {
                 />
               )}
             </div>
+              <div className="bg-black text-green-400 p-3 border-t h-40 overflow-auto">
+    <div className="text-gray-400 mb-1">Output</div>
+    <pre>{output}</pre>
+  </div>
+  </div>
+
           </div>
         )}
       </section>
+
 
       {isModalOpen && (
         <div className="fixed inset-0 flex justify-center items-center bg-black/40 z-50">

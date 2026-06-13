@@ -1,0 +1,6 @@
+{
+  "ignore": [
+    "runs/*",
+    "controllers/run.controller.js"
+  ]
+}

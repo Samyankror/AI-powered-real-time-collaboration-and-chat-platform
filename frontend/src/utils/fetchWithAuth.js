@@ -1,7 +1,7 @@
 import { signOutSuccess } from "../redux/user/userSlice";
 import { store } from "../redux/store";
 export const fetchWithAuth = async (url, options = {}) => {
-  console.log(url, "j");
+  
   try {
     let res = await fetch(url, options);
 

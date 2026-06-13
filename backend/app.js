@@ -5,7 +5,7 @@ import userRoutes from './routes/user.routes.js'
 // import cors from 'cors'
 import projectRoutes from './routes/project.routes.js'
 import aiRoutes from './routes/ai.routes.js'
-
+import runRoute from './routes/run.routes.js'
 
 const app = express(); 
 app.use(morgan('dev'));
@@ -19,7 +19,8 @@ app.use(cookieParser());
 // }));
 app.use('/api/user',userRoutes);
 app.use('/api/project',projectRoutes);
-app.use('/ai',aiRoutes);
+app.use('/api/ai',aiRoutes);
+app.use("/api",runRoute);
 
 
 app.use((err, req, res,next) => {

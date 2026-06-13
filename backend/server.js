@@ -92,6 +92,12 @@ io.on('connection',async(socket)=>{
         
     })
 
+    socket.on('file-tree-change',(data)=>{
+        socket.broadcast.to(socket.roomId).emit('file-tree-updated',data.fileTree);
+    });
+
+
+
     socket.on('disconnect',()=>{
          if (userId) {
         onlineUsers.delete(userId);
